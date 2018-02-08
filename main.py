@@ -104,7 +104,7 @@ def train_cnn(datasets, embeddings, epoches=25, batch_size=50, filter_h=5, max_l
             output = cnn.predict(X)
             loss = criterion(output, y)
 
-            test_loss += loss.data[0]
+7            test_loss += loss.data[0]
             _, pred_y = torch.max(output, 1)
             for pred, gold in zip(pred_y.data, y.data):
                 if int(pred) == int(gold):
