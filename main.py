@@ -158,7 +158,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=50)
     parser.add_argument("--max_l", type=int, default=56)
     parser.add_argument("--embedding_freeze", action="store_true")
-    args.parser.parse_args()
+    args = parser.parse_args()
     torch.backends.cudnn.deterministic = True
 
     revs, W, W2, word_idx_map, vocab = pickle.load(open("mr.p", "rb"), encoding='bytes')
@@ -174,7 +174,7 @@ if __name__ == "__main__":
     for r in range(10):
         datasets = make_idx_data_cv(revs, word_idx_map, r, max_l=args.max_l, k=300, filter_h=5)
         print("CV:{} #Training Data:{} #Test Data:{}".format(r+1, len(datasets[0]), len(datasets[1])))
-        best_test_acc, best_val_acc = train_cnn(datasets, W, batch_size=args.batch_size, seeds=[3435, 1 args.seed], embedding_freeze=args.embedding_freeze)
+        best_test_acc, best_val_acc = train_cnn(datasets, W, batch_size=args.batch_size, seeds=[3435, 1, args.seed], embedding_freeze=args.embedding_freeze)
         print("Val Acc = {:.4f} Test Acc = {:.4f}\n".format(best_val_acc, best_test_acc))
         cv_acc += best_test_acc
     print("Cross Validation Acc = {:.6f}".format(cv_acc/10))
