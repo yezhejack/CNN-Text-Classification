@@ -18,6 +18,6 @@ python main.py
 ```
 Acc=0.806
 ## Dependencies ##
-pytorch==0.3.0 (python3)
-python3
-numpy
+* pytorch==0.3.0
+* python3
+* numpy
