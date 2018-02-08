@@ -13,7 +13,6 @@ is_cuda = torch.cuda.is_available()
 print("CUDA is available={}".format(is_cuda))
 
 def train_cnn(datasets, embeddings, epoches=25, batch_size=50, filter_h=5, max_l=56, seeds=[3435, 1, 0], embedding_freeze=True):
-    start_time = time.time()
     #shuffle dataset and assign to mini batches. if dataset size is not a multiple of mini batches, replicate
     #extra data (at random)
     np.random.seed(seeds[0])
@@ -56,6 +55,7 @@ def train_cnn(datasets, embeddings, epoches=25, batch_size=50, filter_h=5, max_l
     best_val_acc = 0.0
     best_test_acc = 0.0
     for epoch in range(epoches):
+        epoch_start_time = time.time()
         output_str = "[Epoch {}] ".format(epoch)
 
         right_counter = 0
@@ -111,7 +111,7 @@ def train_cnn(datasets, embeddings, epoches=25, batch_size=50, filter_h=5, max_l
                     right_counter += 1
         test_acc = right_counter/float(test_set_x.shape[0])
         output_str += "Test Acc:{:.2f}%".format(100*test_acc)
-        print(output_str+" cost:{:.2f}".format(time.time()-start_time))
+        print(output_str+" cost:{:.2f}s".format(time.time()-epoch_start_time))
 
         if val_acc > best_val_acc:
             best_val_acc = val_acc
@@ -153,6 +153,7 @@ def make_idx_data_cv(revs, word_idx_map, cv, max_l=56, k=300, filter_h=5):
     return [train, test]
 
 if __name__ == "__main__":
+    start_time = time.time()
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--batch_size", type=int, default=50)
@@ -172,12 +173,13 @@ if __name__ == "__main__":
     
     cv_acc = 0.0
     for r in range(10):
+        cv_start_time = time.time()
         datasets = make_idx_data_cv(revs, word_idx_map, r, max_l=args.max_l, k=300, filter_h=5)
         print("CV:{} #Training Data:{} #Test Data:{}".format(r+1, len(datasets[0]), len(datasets[1])))
         best_test_acc, best_val_acc = train_cnn(datasets, W, batch_size=args.batch_size, seeds=[3435, 1, args.seed], embedding_freeze=args.embedding_freeze)
-        print("Val Acc = {:.4f} Test Acc = {:.4f}\n".format(best_val_acc, best_test_acc))
+        print("Val Acc = {:.4f} Test Acc = {:.4f} Cost:{:.2f}\n".format(best_val_acc, best_test_acc, time.time()-cv_start_time))
         cv_acc += best_test_acc
-    print("Cross Validation Acc = {:.6f}".format(cv_acc/10))
+    print("Cross Validation Acc = {:.6f} Cost:{:2f}s".format(cv_acc/10, time.time()-start_time))
     with open("search_seed.csv", "a") as f:
         f.write("{}\t{}\n".format(args.seed, cv_acc/10))
         
