@@ -164,7 +164,6 @@ if __name__ == "__main__":
     for word in word_idx_map:
         idx = word_idx_map[word]
         idx_to_word[idx]=word
-<<<<<<< HEAD
     
     cv_acc = 0.0
     for r in range(10):
@@ -176,12 +175,3 @@ if __name__ == "__main__":
     print("Cross Validation Acc = {:.6f}".format(cv_acc/10))
         
     
-=======
-
-    for r in range(10):
-        datasets = make_idx_data_cv(revs, word_idx_map, r, max_l=max_l, k=300, filter_h=5)
-        print("CV:{} #Training Data:{} #Test Data:{}\n".format(r, len(datasets[0]), len(datasets[1])))
-        train_cnn(datasets, W)
-
-
->>>>>>> b04b0994763ecb79d8d5c11f0c30fdc1c79d9ed2
