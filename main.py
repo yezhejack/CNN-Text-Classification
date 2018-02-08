@@ -47,11 +47,12 @@ def train_cnn(datasets, embeddings, epoches=25, batch_size=50, filter_h=5, max_l
     if is_cuda:
         cnn.cuda()
     optimizer = Adadelta(cnn.trainable_params, rho=0.95)
-    criterion = CrossEntropyLoss(size_average=False)
+    criterion = CrossEntropyLoss()
     best_val_acc = 0.0
     best_test_acc = 0.0
     for epoch in range(epoches):
-        print("[Epoch {}]".format(epoch))
+        output_str = "[Epoch {}] ".format(epoch)
+
         train_loss = 0.0
         right_counter = 0
         for minibatch_index in np.random.permutation(range(n_train_batches)):
@@ -67,12 +68,11 @@ def train_cnn(datasets, embeddings, epoches=25, batch_size=50, filter_h=5, max_l
             optimizer.step()
             cnn.normalize_fc_weight()
 
-            train_loss += loss.data[0]
             _, pred_y = torch.max(output, 1)
             for pred, gold in zip(pred_y.data, y.data):
                 if int(pred) == int(gold):
                     right_counter += 1
-        print("Train Loss\t{}\tAcc\t{}".format(train_loss/float(train_set_x.shape[0]) ,right_counter/float(train_set_x.shape[0])))
+        output_str += "Train Acc\t{}\t".format(right_counter/float(train_set_x.shape[0]))
 
         val_loss = 0.0
         right_counter = 0
@@ -91,7 +91,7 @@ def train_cnn(datasets, embeddings, epoches=25, batch_size=50, filter_h=5, max_l
                 if int(pred) == int(gold):
                     right_counter += 1
         val_acc = right_counter/float(val_set_x.shape[0])
-        print("Val Loss\t{}\tAcc\t{}".format(val_loss/float(val_set_x.shape[0]) ,val_acc))
+        output_str += "Val Acc\t{}\t".format(val_acc)
 
         test_loss = 0.0
         right_counter = 0
@@ -110,7 +110,8 @@ def train_cnn(datasets, embeddings, epoches=25, batch_size=50, filter_h=5, max_l
                 if int(pred) == int(gold):
                     right_counter += 1
         test_acc = right_counter/float(test_set_x.shape[0])
-        print("Test Loss\t{}\tAcc\t{}".format(test_loss/float(test_set_x.shape[0]) ,test_acc))
+        output_str += "Test Acc\t{}\n".format(test_acc)
+        print(output_str)
 
         if val_acc > best_val_acc:
             best_val_acc = val_acc
