@@ -8,13 +8,15 @@ import torch
 from torch.optim import Adadelta
 from torch.autograd import Variable
 from torch.nn import CrossEntropyLoss
+import time
 is_cuda = torch.cuda.is_available()
 print("CUDA is available={}".format(is_cuda))
 
-def train_cnn(datasets, embeddings, epoches=25, batch_size=50, filter_h=5, max_l=56):
+def train_cnn(datasets, embeddings, epoches=25, batch_size=50, filter_h=5, max_l=56, seeds=[3435, 1, 0], embedding_freeze=True):
+    start_time = time.time()
     #shuffle dataset and assign to mini batches. if dataset size is not a multiple of mini batches, replicate
     #extra data (at random)
-    np.random.seed(3435)
+    np.random.seed(seeds[0])
     if datasets[0].shape[0] % batch_size > 0:
         extra_data_num = batch_size - datasets[0].shape[0] % batch_size
         train_set = np.random.permutation(datasets[0])
@@ -42,8 +44,11 @@ def train_cnn(datasets, embeddings, epoches=25, batch_size=50, filter_h=5, max_l
     print("#Train:{} #Val:{}".format(train_set_x.shape[0], val_set_x.shape[0]))
 
     # define model
-    cnn = model.CNN(embeddings, img_h, num_classes=2)
-    print(cnn)
+    cnn = model.CNN(embeddings, img_h, num_classes=2, init_seed=seeds[1], embedding_freeze=embedding_freeze)
+    
+    # set seed for training
+    torch.cuda.manual_seed_all(seeds[2])
+
     if is_cuda:
         cnn.cuda()
     optimizer = Adadelta(cnn.trainable_params, rho=0.95)
@@ -53,7 +58,6 @@ def train_cnn(datasets, embeddings, epoches=25, batch_size=50, filter_h=5, max_l
     for epoch in range(epoches):
         output_str = "[Epoch {}] ".format(epoch)
 
-        train_loss = 0.0
         right_counter = 0
         for minibatch_index in np.random.permutation(range(n_train_batches)):
             optimizer.zero_grad()
@@ -72,9 +76,8 @@ def train_cnn(datasets, embeddings, epoches=25, batch_size=50, filter_h=5, max_l
             for pred, gold in zip(pred_y.data, y.data):
                 if int(pred) == int(gold):
                     right_counter += 1
-        output_str += "Train Acc\t{}\t".format(right_counter/float(train_set_x.shape[0]))
+        output_str += "Train Acc:{:.2f}%\t".format(right_counter/float(train_set_x.shape[0]))
 
-        val_loss = 0.0
         right_counter = 0
         for minibatch_index in range(n_val_batches):
             X = Variable(torch.LongTensor(val_set_x[minibatch_index * batch_size: (minibatch_index + 1) * batch_size]))
@@ -85,15 +88,13 @@ def train_cnn(datasets, embeddings, epoches=25, batch_size=50, filter_h=5, max_l
             output = cnn.predict(X)
             loss = criterion(output, y)
 
-            val_loss += loss.data[0]
             _, pred_y = torch.max(output, 1)
             for pred, gold in zip(pred_y.data, y.data):
                 if int(pred) == int(gold):
                     right_counter += 1
         val_acc = right_counter/float(val_set_x.shape[0])
-        output_str += "Val Acc\t{}\t".format(val_acc)
+        output_str += "Val Acc:{:.2f}%\t".format(100*val_acc)
 
-        test_loss = 0.0
         right_counter = 0
         for minibatch_index in range(n_test_batches):
             X = Variable(torch.LongTensor(test_set_x[minibatch_index * batch_size: (minibatch_index + 1) * batch_size]))
@@ -104,14 +105,13 @@ def train_cnn(datasets, embeddings, epoches=25, batch_size=50, filter_h=5, max_l
             output = cnn.predict(X)
             loss = criterion(output, y)
 
-7            test_loss += loss.data[0]
             _, pred_y = torch.max(output, 1)
             for pred, gold in zip(pred_y.data, y.data):
                 if int(pred) == int(gold):
                     right_counter += 1
         test_acc = right_counter/float(test_set_x.shape[0])
-        output_str += "Test Acc\t{}".format(test_acc)
-        print(output_str)
+        output_str += "Test Acc:{:.2f}%".format(100*test_acc)
+        print(output_str+" cost:{:.2f}".format(time.time()-start_time))
 
         if val_acc > best_val_acc:
             best_val_acc = val_acc
@@ -153,9 +153,13 @@ def make_idx_data_cv(revs, word_idx_map, cv, max_l=56, k=300, filter_h=5):
     return [train, test]
 
 if __name__ == "__main__":
-
-    batch_size = 50
-    max_l = 56
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--batch_size", type=int, default=50)
+    parser.add_argument("--max_l", type=int, default=56)
+    parser.add_argument("--embedding_freeze", action="store_true")
+    args.parser.parse_args()
+    torch.backends.cudnn.deterministic = True
 
     revs, W, W2, word_idx_map, vocab = pickle.load(open("mr.p", "rb"), encoding='bytes')
 
@@ -168,11 +172,13 @@ if __name__ == "__main__":
     
     cv_acc = 0.0
     for r in range(10):
-        datasets = make_idx_data_cv(revs, word_idx_map, r, max_l=max_l, k=300, filter_h=5)
-        print("CV:{} #Training Data:{} #Test Data:{}\n".format(r, len(datasets[0]), len(datasets[1])))
-        best_test_acc, best_val_acc = train_cnn(datasets, W)
-        print("Val Acc = {:.4f} Test Acc = {:.4f}".format(best_val_acc, best_test_acc))
+        datasets = make_idx_data_cv(revs, word_idx_map, r, max_l=args.max_l, k=300, filter_h=5)
+        print("CV:{} #Training Data:{} #Test Data:{}".format(r+1, len(datasets[0]), len(datasets[1])))
+        best_test_acc, best_val_acc = train_cnn(datasets, W, batch_size=args.batch_size, seeds=[3435, 1 args.seed], embedding_freeze=args.embedding_freeze)
+        print("Val Acc = {:.4f} Test Acc = {:.4f}\n".format(best_val_acc, best_test_acc))
         cv_acc += best_test_acc
     print("Cross Validation Acc = {:.6f}".format(cv_acc/10))
+    with open("search_seed.csv", "a") as f:
+        f.write("{}\t{}\n".format(args.seed, cv_acc/10))
         
     

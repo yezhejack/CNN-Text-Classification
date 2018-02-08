@@ -13,11 +13,12 @@ class CNN(nn.Module):
                  embedding_freeze=True, 
                  num_classes=3,
                  l2_constraint=3.0,
-                 dropout_p=0.5):
+                 dropout_p=0.5,
+                 init_seed=1):
 
         super(CNN,self).__init__()
         self.dropout_p = dropout_p
-        rng = np.random.RandomState(1)
+        rng = np.random.RandomState(init_seed)
         self.l2_constraint=l2_constraint
         self.trainable_params = []
         vocab_size=embeddings.shape[0]
