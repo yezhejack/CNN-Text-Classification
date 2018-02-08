@@ -177,9 +177,9 @@ if __name__ == "__main__":
         datasets = make_idx_data_cv(revs, word_idx_map, r, max_l=args.max_l, k=300, filter_h=5)
         print("CV:{} #Training Data:{} #Test Data:{}".format(r+1, len(datasets[0]), len(datasets[1])))
         best_test_acc, best_val_acc = train_cnn(datasets, W, batch_size=args.batch_size, seeds=[3435, 1, args.seed], embedding_freeze=args.embedding_freeze)
-        print("Val Acc = {:.4f} Test Acc = {:.4f} Cost:{:.2f}\n".format(best_val_acc, best_test_acc, time.time()-cv_start_time))
+        print("Val Acc = {:.2f} Test Acc = {:.2f} Cost:{:.2f}\n".format(100*best_val_acc, 100*best_test_acc, time.time()-cv_start_time))
         cv_acc += best_test_acc
-    print("Cross Validation Acc = {:.6f} Cost:{:2f}s".format(cv_acc/10, time.time()-start_time))
+    print("Cross Validation Acc = {} Cost:{:2f}s".format(100*cv_acc/10, time.time()-start_time))
     with open("search_seed.csv", "a") as f:
         f.write("{}\t{}\n".format(args.seed, cv_acc/10))
         
