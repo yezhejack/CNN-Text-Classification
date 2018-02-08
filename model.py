@@ -84,5 +84,6 @@ class CNN(nn.Module):
             #pooling_output=F.relu(pooling_output)
             convs_output.append(pooling_output)
         output=torch.cat(convs_output,1)
-        output=F.linear(output, (1-self.dropout_p)*self.fc_w, self.fc_b)
+        output=F.linear(output, self.fc_w, self.fc_b)
+        #output=F.linear(output, (1-self.dropout_p)*self.fc_w, self.fc_b)
         return output
