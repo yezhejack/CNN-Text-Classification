@@ -12,12 +12,12 @@ class CNN(nn.Module):
                  num_filters=100, 
                  embedding_freeze=True, 
                  num_classes=3,
-                 l2_constraint=3,
+                 l2_constraint=3.0,
                  dropout_p=0.5):
 
         super(CNN,self).__init__()
         self.dropout_p = dropout_p
-        rng = np.random.RandomState(1)
+        rng = np.random.RandomState(3435)
         self.l2_constraint=l2_constraint
         self.trainable_params = []
         vocab_size=embeddings.shape[0]
@@ -47,7 +47,7 @@ class CNN(nn.Module):
                     params.data.fill_(0.0)
             self.conv_list.append(conv)
         
-        self.fc_w = nn.Parameter(torch.FloatTensor(rng.uniform(low=-0.01, high=0.01, size=[num_classes, len(filters)*num_filters])))
+        self.fc_w = nn.Parameter(torch.zeros([num_classes, len(filters)*num_filters]))
         self.fc_b = nn.Parameter(torch.zeros(num_classes))
         self.trainable_params.append(self.fc_w)
         self.trainable_params.append(self.fc_b)
@@ -84,6 +84,6 @@ class CNN(nn.Module):
             #pooling_output=F.relu(pooling_output)
             convs_output.append(pooling_output)
         output=torch.cat(convs_output,1)
-        output=F.linear(output, self.fc_w, self.fc_b)
-        #output=F.linear(output, (1-self.dropout_p)*self.fc_w, self.fc_b)
+        #output=F.linear(output, self.fc_w, self.fc_b)
+        output=F.linear(output, (1-self.dropout_p)*self.fc_w, self.fc_b)
         return output
