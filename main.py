@@ -48,6 +48,8 @@ def train_cnn(datasets, embeddings, epoches=25, batch_size=50, filter_h=5, max_l
         cnn.cuda()
     optimizer = Adadelta(cnn.trainable_params, rho=0.95)
     criterion = CrossEntropyLoss(size_average=False)
+    best_val_acc = 0.0
+    best_test_acc = 0.0
     for epoch in range(epoches):
         print("[Epoch {}]".format(epoch))
         train_loss = 0.0
@@ -88,7 +90,8 @@ def train_cnn(datasets, embeddings, epoches=25, batch_size=50, filter_h=5, max_l
             for pred, gold in zip(pred_y.data, y.data):
                 if int(pred) == int(gold):
                     right_counter += 1
-        print("Val Loss\t{}\tAcc\t{}".format(val_loss/float(val_set_x.shape[0]) ,right_counter/float(val_set_x.shape[0])))
+        val_acc = right_counter/float(val_set_x.shape[0])
+        print("Val Loss\t{}\tAcc\t{}".format(val_loss/float(val_set_x.shape[0]) ,val_acc))
 
         test_loss = 0.0
         right_counter = 0
@@ -106,8 +109,13 @@ def train_cnn(datasets, embeddings, epoches=25, batch_size=50, filter_h=5, max_l
             for pred, gold in zip(pred_y.data, y.data):
                 if int(pred) == int(gold):
                     right_counter += 1
-        print("Test Loss\t{}\tAcc\t{}".format(test_loss/float(test_set_x.shape[0]) ,right_counter/float(test_set_x.shape[0])))
+        test_acc = right_counter/float(test_set_x.shape[0])
+        print("Test Loss\t{}\tAcc\t{}".format(test_loss/float(test_set_x.shape[0]) ,test_acc))
 
+        if val_acc > best_val_acc:
+            best_val_acc = val_acc
+            best_test_acc = test_acc
+    return best_test_acc, best_val_acc
 
 def get_idx_from_sent(sent, word_idx_map, max_l=56, k=300, filter_h=5):
     """
@@ -157,9 +165,13 @@ if __name__ == "__main__":
         idx = word_idx_map[word]
         idx_to_word[idx]=word
     
+    cv_acc = 0.0
     for r in range(10):
         datasets = make_idx_data_cv(revs, word_idx_map, r, max_l=max_l, k=300, filter_h=5)
         print("CV:{} #Training Data:{} #Test Data:{}\n".format(r, len(datasets[0]), len(datasets[1])))
-        train_cnn(datasets, W)
+        best_test_acc, best_val_acc = train_cnn(datasets, W)
+        print("Val Acc = {:.4f} Test Acc = {:.4f}".format(best_val_acc, best_test_acc))
+        cv_acc += best_test_acc
+    print("Cross Validation Acc = {:.6f}".format(cv_acc/10))
         
     
