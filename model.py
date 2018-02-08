@@ -10,7 +10,7 @@ class CNN(nn.Module):
     def __init__(self, embeddings, sentence_size, 
                  filters=[3,4,5], 
                  num_filters=100, 
-                 embedding_freeze=False, 
+                 embedding_freeze=True, 
                  num_classes=3,
                  l2_constraint=3):
 
