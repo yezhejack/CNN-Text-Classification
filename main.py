@@ -95,15 +95,13 @@ def train_cnn(datasets, embeddings, epoches=25, batch_size=50, filter_h=5, max_l
         for minibatch_index in range(n_test_batches):
             X = Variable(torch.LongTensor(test_set_x[minibatch_index * batch_size: (minibatch_index + 1) * batch_size]))
             y = Variable(torch.LongTensor(test_set_y[minibatch_index * batch_size: (minibatch_index + 1) * batch_size]))
-            print("Test Index:{}".format(minibatch_index))
-            print("This batch size is {}".format(X.shape[0]))
             if is_cuda:
                 X = X.cuda()
                 y = y.cuda()
             output = cnn.predict(X)
             loss = criterion(output, y)
     
-            val_loss += loss.data[0]
+            test_loss += loss.data[0]
             _, pred_y = torch.max(output, 1)
             for pred, gold in zip(pred_y.data, y.data):
                 if int(pred) == int(gold):
