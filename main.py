@@ -29,6 +29,9 @@ def train_cnn(datasets, embeddings, epoches=25, batch_size=50, filter_h=5, max_l
     img_h = max_l + 2 * (filter_h - 1)
     test_set_x = datasets[1][:,:img_h] 
     test_set_y = np.asarray(datasets[1][:,-1],"int32")
+    n_test_batches = int(test_set_x.shape[0]/batch_size)
+    if test_set_x.shape[0] % batch_size != 0:
+        n_test_batches += 1
     train_set = new_data[:n_train_batches*batch_size,:]
     val_set = new_data[n_train_batches*batch_size:,:]
     train_set_x = train_set[:,:img_h]
@@ -39,13 +42,14 @@ def train_cnn(datasets, embeddings, epoches=25, batch_size=50, filter_h=5, max_l
     print("#Train:{} #Val:{}".format(train_set_x.shape[0], val_set_x.shape[0]))
 
     # define model
-    cnn = model.CNN(embeddings, img_h)
+    cnn = model.CNN(embeddings, img_h, num_classes=2)
+    print(cnn)
     if is_cuda:
         cnn.cuda()
     optimizer = Adadelta(cnn.trainable_params, rho=0.95)
     criterion = CrossEntropyLoss(size_average=False)
     for epoch in range(epoches):
-        cnn.train()
+        print("[Epoch {}]".format(epoch))
         train_loss = 0.0
         right_counter = 0
         for minibatch_index in np.random.permutation(range(n_train_batches)):
@@ -58,15 +62,16 @@ def train_cnn(datasets, embeddings, epoches=25, batch_size=50, filter_h=5, max_l
             output = cnn.forward(X)
             loss = criterion(output, y)
             loss.backward()
+            optimizer.step()
+            cnn.normalize_fc_weight()
             
             train_loss += loss.data[0]
             _, pred_y = torch.max(output, 1)
             for pred, gold in zip(pred_y.data, y.data):
                 if int(pred) == int(gold):
                     right_counter += 1
-        print("Train Loss {} Acc {}".format(train_loss/float(train_set_x.shape[0]) ,right_counter/float(train_set_x.shape[0])))
+        print("Train Loss\t{}\tAcc\t{}".format(train_loss/float(train_set_x.shape[0]) ,right_counter/float(train_set_x.shape[0])))
         
-        cnn.eval()
         val_loss = 0.0
         right_counter = 0
         for minibatch_index in range(n_val_batches):
@@ -75,7 +80,7 @@ def train_cnn(datasets, embeddings, epoches=25, batch_size=50, filter_h=5, max_l
             if is_cuda:
                 X = X.cuda()
                 y = y.cuda()
-            output = cnn.forward(X)
+            output = cnn.predict(X)
             loss = criterion(output, y)
     
             val_loss += loss.data[0]
@@ -83,8 +88,27 @@ def train_cnn(datasets, embeddings, epoches=25, batch_size=50, filter_h=5, max_l
             for pred, gold in zip(pred_y.data, y.data):
                 if int(pred) == int(gold):
                     right_counter += 1
-        print("Val Loss {} Acc {}".format(val_loss/float(val_set_x.shape[0]) ,right_counter/float(val_set_x.shape[0])))
+        print("Val Loss\t{}\tAcc\t{}".format(val_loss/float(val_set_x.shape[0]) ,right_counter/float(val_set_x.shape[0])))
 
+        test_loss = 0.0
+        right_counter = 0
+        for minibatch_index in range(n_test_batches):
+            X = Variable(torch.LongTensor(test_set_x[minibatch_index * batch_size: (minibatch_index + 1) * batch_size]))
+            y = Variable(torch.LongTensor(test_set_y[minibatch_index * batch_size: (minibatch_index + 1) * batch_size]))
+            print("Test Index:{}".format(minibatch_index))
+            print("This batch size is {}".format(X.shape[0]))
+            if is_cuda:
+                X = X.cuda()
+                y = y.cuda()
+            output = cnn.predict(X)
+            loss = criterion(output, y)
+    
+            val_loss += loss.data[0]
+            _, pred_y = torch.max(output, 1)
+            for pred, gold in zip(pred_y.data, y.data):
+                if int(pred) == int(gold):
+                    right_counter += 1
+        print("Test Loss\t{}\tAcc\t{}".format(test_loss/float(test_set_x.shape[0]) ,right_counter/float(test_set_x.shape[0])))
 
 
 def get_idx_from_sent(sent, word_idx_map, max_l=56, k=300, filter_h=5):
@@ -127,10 +151,8 @@ if __name__ == "__main__":
     max_l = 56
 
     revs, W, W2, word_idx_map, vocab = pickle.load(open("mr.p", "rb"), encoding='bytes')
-    print(W)
-    print(len(word_idx_map))
-    print(len(W2))
-    print(len(vocab))
+
+    print("Number of word_idx_map:{}".format(len(word_idx_map)))
     idx_to_word = ["" for i in range(len(W))]
 
     for word in word_idx_map:

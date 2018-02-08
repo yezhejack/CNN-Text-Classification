@@ -12,9 +12,12 @@ class CNN(nn.Module):
                  num_filters=100, 
                  embedding_freeze=True, 
                  num_classes=3,
-                 l2_constraint=3):
+                 l2_constraint=3,
+                 dropout_p=0.5):
 
         super(CNN,self).__init__()
+        self.dropout_p = dropout_p
+        rng = np.random.RandomState(1)
         self.l2_constraint=l2_constraint
         self.trainable_params = []
         vocab_size=embeddings.shape[0]
@@ -36,20 +39,18 @@ class CNN(nn.Module):
         for filter in filters:
             conv = nn.Conv2d(1, num_filters, (filter, embed_size))
             for params in conv.parameters():
+                print(params.data.shape)
                 self.trainable_params.append(params)
                 if params.data.dim()>1:
-                    nn.init.uniform(params, a=-0.01, b=0.01)
+                    params.data = torch.FloatTensor(rng.uniform(low=-0.01, high=0.01, size=params.data.shape))
                 else:
                     params.data.fill_(0.0)
             self.conv_list.append(conv)
-        self.fc_dropout = nn.Dropout(p=0.5)
-        self.fc = nn.Linear(3*num_filters, num_classes)
-        for params in self.fc.parameters():
-            self.trainable_params.append(params)
-            if params.data.dim() > 1:
-                nn.init.uniform(params, a=-0.01, b=0.01)
-            else:
-                params.data.fill_(0.0)
+        
+        self.fc_w = nn.Parameter(torch.FloatTensor(rng.uniform(low=-0.01, high=0.01, size=[num_classes, len(filters)*num_filters])))
+        self.fc_b = nn.Parameter(torch.zeros(num_classes))
+        self.trainable_params.append(self.fc_w)
+        self.trainable_params.append(self.fc_b)
 
     def forward(self,x):
         x=self.embed(x)
@@ -62,14 +63,26 @@ class CNN(nn.Module):
             #pooling_output=F.relu(pooling_output)
             convs_output.append(pooling_output)
         output=torch.cat(convs_output,1)
-        output=self.fc_dropout(output)
-        output=self.fc(output)
+        output=F.dropout(output, p=self.dropout_p)
+        output=F.linear(output, self.fc_w, self.fc_b)
         return output
     
     def normalize_fc_weight(self):
-        for params in self.fc.parameters():
-            if params.data.dim() == 2:
-                l2_norm = torch.norm(params.data, p=2)
-                if l2_norm > self.l2_constraint:
-                    scale = self.l2_constraint / (l2_norm)
-                    params.data *= scale
+        l2_norm = torch.norm(self.fc_w.data, p=2)
+        if l2_norm > self.l2_constraint:
+            scale = self.l2_constraint / (l2_norm)
+            self.fc_w.data *= scale
+    
+    def predict(self, x):
+        x=self.embed(x)
+        x=x.view(x.size(0),1,x.size(1),x.size(2))
+        convs_output=[]
+        for filter,conv in zip(self.filters,self.conv_list):
+            conv_output=conv(x)
+            pooling_output=F.max_pool2d(F.relu(conv_output),(self.sentence_size-filter+1,1))
+            pooling_output=pooling_output.view(-1,self.num_filters)
+            #pooling_output=F.relu(pooling_output)
+            convs_output.append(pooling_output)
+        output=torch.cat(convs_output,1)
+        output=F.linear(output, (1-self.dropout_p)*self.fc_w, self.fc_b)
+        return output
