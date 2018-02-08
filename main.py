@@ -110,7 +110,7 @@ def train_cnn(datasets, embeddings, epoches=25, batch_size=50, filter_h=5, max_l
                 if int(pred) == int(gold):
                     right_counter += 1
         test_acc = right_counter/float(test_set_x.shape[0])
-        output_str += "Test Acc\t{}\n".format(test_acc)
+        output_str += "Test Acc\t{}".format(test_acc)
         print(output_str)
 
         if val_acc > best_val_acc:
