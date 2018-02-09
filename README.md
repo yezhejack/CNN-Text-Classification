@@ -11,12 +11,12 @@ python process_data.py <path_to_word2vec>
 ```
 python main.py --embedding_freeze
 ```
-Acc=0.812
+Acc=0.8083
 ### non-static
 ```
 python main.py
 ```
-Acc=0.806
+Acc=0.8135
 ## Dependencies ##
 * pytorch==0.3.0
 * python3
