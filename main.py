@@ -12,7 +12,7 @@ import time
 is_cuda = torch.cuda.is_available()
 print("CUDA is available={}".format(is_cuda))
 
-def train_cnn(datasets, embeddings, epoches=25, batch_size=50, filter_h=5, max_l=56, seeds=[3435, 1, 0], embedding_freeze=True):
+def train_cnn(datasets, embeddings, epoches=25, batch_size=50, filter_h=5, max_l=56, seeds=[3435, 3435, 0], embedding_freeze=True):
     #shuffle dataset and assign to mini batches. if dataset size is not a multiple of mini batches, replicate
     #extra data (at random)
     np.random.seed(seeds[0])

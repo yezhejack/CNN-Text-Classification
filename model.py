@@ -3,7 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim
 from torch.autograd import Variable
-import torch.nn.utils.weight_norm as weight_norm
 import numpy as np
 
 class CNN(nn.Module):
