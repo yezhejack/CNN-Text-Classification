@@ -122,7 +122,7 @@ def clean_str_sst(string):
     return string.strip().lower()
 
 if __name__=="__main__":    
-    w2v_file = sys.argv[1]     
+    w2v_file = sys.argv[1]  
     data_folder = ["rt-polarity.pos","rt-polarity.neg"]    
     print("loading data...")   
     revs, vocab = build_data_cv(data_folder, cv=10, clean_string=True)
