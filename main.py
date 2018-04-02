@@ -76,7 +76,7 @@ def train_cnn(datasets, embeddings, epoches=25, batch_size=50, filter_h=5, max_l
             for pred, gold in zip(pred_y.data, y.data):
                 if int(pred) == int(gold):
                     right_counter += 1
-        output_str += "Train Acc:{:.2f}%\t".format(right_counter/float(train_set_x.shape[0]))
+        output_str += "Train Acc:{:.2f}%\t".format(100*right_counter/float(train_set_x.shape[0]))
 
         right_counter = 0
         for minibatch_index in range(n_val_batches):
